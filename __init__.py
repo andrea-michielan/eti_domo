@@ -7,15 +7,41 @@ header = {
     "Connection": "Keep-Alive"
 }
 
+class UnauthorizedLogin(Exception):
+    """
+    Raised when a user try to login with wrong username/password combination
+    """
+    pass
+
+class RequestError(Exception):
+    """
+    Raised when a user send an invalid request to the server
+    """
+    pass
+
 class Domo:
 
-    def __init__(self, host="http://192.168.1.251/domo/"):
-        self.host = host
+    def __init__(self, host: str = "http://192.168.1.251/domo/"):
+        """ 
+        Instantiate a new :class:`Object` of type :class:`Domo` that communicates with an Eti/Domo server at the specified ip address
+
+        :param host: A string representing the ip address of the Eti/Domo server
+        """
+
+        self.host = "http://" + host + "/domo/"
         self.cseq = 1
         self.id = ""
 
-    # Function that makes the login and return if the user is authenticated
-    def login(self, username, password):
+    def login(self, username: str, password: str) -> None:
+        """
+        Method that takes in the username and password and attempt a login to the server.
+        If the login is correct, then the ``id`` parameter of the object :class:`Domo` will be set to the session id given by the server.
+
+        :param username: username of the user
+        :param password: password of the user
+        :return: ``<None>``
+        :raises UnauthorizedLogin: if the combination of username and password is incorrect.
+        """
 
         # Create the login request
         login_parameters = 'command={"sl_cmd":"sl_registration_req","sl_login":"' + str(username) + '","sl_pwd":"' + str(password) + '"}'
@@ -26,12 +52,17 @@ class Domo:
         # Set the client id for the session
         self.id = response.json()['sl_client_id']
 
-        # Return true if the user is authenticated
-        return not self.id == ""
+        # Check if the user is authorized
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise UnauthorizedLogin
 
-
-    # Function that request an update and return the json of the result
-    def update_request(self):
+    def update_request(self) -> dict:
+        """ 
+        Method that send the server an update request, usually sent after every action (such as turning on a light).
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"status_update_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -42,11 +73,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of the relays
-    def relays_list(self):
+    def relays_list(self) -> dict:
+        """ 
+        Get a json list of all the relays controlled by the Eti/Domo.
+
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"relays_list_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -57,11 +97,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of the tvcc
-    def tvcc_list(self):
+    def tvcc_list(self) -> dict:
+        """ 
+        Get a json list of all the tvcc cameras controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"tvcc_cameras_list_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -72,11 +121,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of timers
-    def timers_list(self):
+    def timers_list(self) -> dict:
+        """ 
+        Get a json list of all the timers controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"timers_list_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -87,11 +145,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of thermos
-    def thermos_list(self):
+    def thermos_list(self) -> dict:
+        """ 
+        Get a json list of all the thermos zone and sensors controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"nested_thermo_list_req","cseq":' + str(self.cseq) + ',"extended_infos":2,"topologic_scope":"plant","value":0},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -102,11 +169,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of analog inputs (higrometers)
-    def analogin_list(self):
+    def analogin_list(self) -> dict:
+        """ 
+        Get a json list of all the analog input devices (such as hygrometer) controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"analogin_list_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -117,11 +193,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of digital inputs
-    def digitalin_list(self):
+    def digitalin_list(self) -> dict:
+        """ 
+        Get a json list of all the digital input devices (such as the lights' buttons) controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"digitalin_list_req","cseq":' + str(self.cseq) + ',"filter":1023},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -132,11 +217,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of terminals group (?)
-    def terminals_list(self):
+    def terminals_list(self) -> dict:
+        """ 
+        Get a json list of all of terminals group (don't kwow what that is) controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"terminals_group_list_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -147,11 +241,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a json list of the lights
-    def lights_list(self):
+    def lights_list(self) -> dict:
+        """ 
+        Get a json list of all of the lights controlled by the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"nested_light_list_req","cseq":' + str(self.cseq) + ',"topologic_scope":"plant","value":0},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -162,11 +265,21 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()['array']
 
-    # Get the list of users, it seems like cseq is not sent, and even the server won't return it
-    def users_list(self):
+    def users_list(self) -> dict:
+        """ 
+        Get a json list of users registered on the server Eti/Domo.
+        ``Note``: this is the only request that does not send and receive any cseq.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_client_id":"' + self.id + '","sl_cmd":"sl_users_list_req"}'
@@ -177,11 +290,20 @@ class Domo:
         # Increment the cseq counter
         #self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get all the elements of the map
-    def get_map(self):
+    def get_map(self) -> dict:
+        """ 
+        Get a json list of all the maps save in the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"cmd_name":"map_descr_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -192,11 +314,20 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Get a list of all the features available
-    def get_features(self):
+    def get_features(self) -> dict:
+        """ 
+        Get a json list of features available with the Eti/Domo.
+        
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
         # Create the requests' parameters
         param = 'command={"sl_appl_msg":{"client":"' + self.id + '","cmd_name":"feature_list_req","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
@@ -207,12 +338,24 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
-    # Turn on or off the light
-    def light_switch(self, act_id, on=True):
+    def light_switch(self, act_id: int, on: bool = True) -> dict:
+        """ 
+        Get a json list of all of terminals group (don't kwow what that is) controlled by the Eti/Domo.
+        
+        :param act_id: id of the light to be turned on or off
+        :param on: True if the light is to be turned on, False if off
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
+        """
 
+        # Check if the user wants the light to be turned on or off
         status = "1" if on else "0"
 
         # Create the requests' parameters
@@ -224,26 +367,42 @@ class Domo:
         # Increment the cseq counter
         self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
         # Return the json of the response
         return response.json()
 
 
 if __name__ == "__main__":
+
+    # Create a new session with the specified host
     session = Domo()
-    if not session.login("utente2", "utente2"):
-        print("Wrong username/password!")
+
+    # Login to the server
+    try:
+        session.login("gigi", "toni")
+    except UnauthorizedLogin:
+        print("Wrong username/password combo!")
         sys.exit(-1)
+
+    # Print the session id
     print(f"You are now logged in! ID: {session.id}")
-    #print("\nRequesting an update...")
-    #print(session.update_request())
+
+    
     print("\nRequesting the list of relays...")
     print(session.relays_list())
+
     print("\nRequesting the list of users...")
     print(session.users_list())
+
     print("\nRequesting the list of features...")
     print(session.get_features())
+
     #print("\nRequesting the list of map elements...")
     #print(session.get_map())
+    
     print("\nRequesting the list of lights...")
     floors = session.lights_list()
     for floor in floors:
