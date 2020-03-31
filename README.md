@@ -1,2 +1,2 @@
-# Came_ETI-Domo
- A set of API to talk to a Came/BPT eti/domo server
+# Came/btp Eti/Domo Unofficial API
+ A set of unofficial API to communicate with a Came/BPT eti/domo server

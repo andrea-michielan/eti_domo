@@ -33,16 +33,15 @@ class Domo:
     available_commands = {
         "update": "status_update_req",
         "relays": "relays_list_req",
-        "tvcc": "tvcc_cameras_list_req",
+        "cameras": "tvcc_cameras_list_req",
         "timers": "timers_list_req",
-        "thermos": "thermo_list_req",
+        "thermoregulation": "thermo_list_req",
         "analogin": "analogin_list_req",
         "digitalin": "digitalin_list_req",
-        "terminals": "terminals_group_list_req",
         "lights": "nested_light_list_req",
         "features": "feature_list_req",
         "users": "sl_users_list_req",
-        "map": "map_descr_req"
+        "maps": "map_descr_req"
     }
 
     def __init__(self, host: str):
@@ -53,9 +52,15 @@ class Domo:
         :raises :class:`ServerNotFound`: if the :param:`host` is not available
         """
 
+        # Wrap the host ip in a http url
         self.host = "http://" + host + "/domo/"
+        # The sequence start from 1
         self.cseq = 1
+        # Session id for the client
         self.id = ""
+
+        # List of items managed by the server
+        self.items = {}
 
         # Check if the host is available
         response = requests.get(self.host, headers=self.header)
@@ -64,7 +69,6 @@ class Domo:
         if not response.status_code == 200:
             self.host = ""
             raise ServerNotFound
-
 
     def login(self, username: str, password: str) -> None:
         """
@@ -90,9 +94,27 @@ class Domo:
         if not response.json()['sl_data_ack_reason'] == 0:
             raise UnauthorizedLogin
 
-    def cmd_request(self, cmd_name):
+        # If the user has access to the server we make the request for all the items available
+        self.udpate_lists()
+
+    def update_lists(self):
         """ 
-        Method that send the server an update request, usually sent after every action (such as turning on a light).
+        Function that update the items dictionary containing all the items managed by the eti/domo server 
+        """
+
+        # Get a list of available features for the user
+        features_list = self.list_request(self.available_commands['features'])['list']
+        # Populate the items dictionary containing every item of the server
+        for feature in features_list:
+            # Get the json response from the server
+            tmp_list = self.list_request(self.available_commands[feature])
+            # Parse the json into a more readable and useful structure
+            self.items[feature] = tmp_list
+
+
+    def list_request(self, cmd_name):
+        """ 
+        Method that send the server a request and retrieve a list of items identified by the :param:`cmd_name` parameter
         
         :return: a json dictionary representing the response of the server
         :raises RequestError: if the request is invalid
@@ -108,10 +130,22 @@ class Domo:
 
         # If the user requested a list of users, then the parameters are different
         sl_cmd = '"sl_cmd":"sl_users_list_req"' if cmd_name == "sl_users_list_req" else '"sl_cmd":"sl_data_req"'
-        sl_appl_msg = '"sl_appl_msg":{' + client_id + '"cmd_name":"' + cmd_name + '","cseq":' + str(self.cseq) + '},"sl_appl_msg_type":"domo",' if not cmd_name == "sl_users_list_req" else ''
+        sl_appl_msg =   ('"sl_appl_msg":{' 
+                            '' + client_id + ''
+                            '"cmd_name":"' + cmd_name + '",'
+                            '"cseq":' + str(self.cseq) + ''
+                        '},'
+                        '"sl_appl_msg_type":"domo",' if not cmd_name == "sl_users_list_req" else ''
+                        )
 
         # Create the requests' parameters
-        param = 'command={' + sl_appl_msg + '"sl_client_id":"' + self.id + '",' + sl_cmd + '}'
+        param = (
+                'command={' 
+                    '' + sl_appl_msg + ''
+                    '"sl_client_id":"' + self.id + '",'
+                    '' + sl_cmd + ''
+                '}'
+                )
         
         # Send the post request
         response = requests.post(self.host, params=param, headers=self.header)
@@ -130,21 +164,36 @@ class Domo:
         # Return the json of the response
         return response_json
 
-    def light_switch(self, act_id: int, on: bool = True) -> dict:
+    def switch(self, act_id: int, status: bool = True, is_light: bool = True) -> dict:
         """ 
-        Get a json list of all of terminals group (don't kwow what that is) controlled by the Eti/Domo.
+        Method to turn on or off a light switch or a relays
         
-        :param act_id: id of the light to be turned on or off
-        :param on: True if the light is to be turned on, False if off
+        :param act_id: id of the light/relay to be turned on or off
+        :param status: True if the light/relay is to be turned on, False if off
+        :param is_light: True if the item to switch is a light, False if it is a relay
         :return: a json dictionary representing the response of the server
         :raises RequestError: Raise a RequestError if the request is invalid
         """
 
         # Check if the user wants the light to be turned on or off
-        status = "1" if on else "0"
+        status = "1" if status else "0"
+
+        # Check if the user want to switch a light or activate a relay
+        cmd_name = "light_switch_req" if is_light else "relay_activation_req"
 
         # Create the requests' parameters
-        param = 'command={"sl_appl_msg":{"act_id":' + str(act_id) + ',"client":"' + self.id + '","cmd_name":"light_switch_req","cseq":' + str(self.cseq) + ',"wanted_status":' + status + '},"sl_appl_msg_type":"domo","sl_client_id":"' + self.id + '","sl_cmd":"sl_data_req"}'
+        param = ('command={'
+                    '"sl_appl_msg":{'
+                        '"act_id":' + str(act_id) + ','
+                        '"client":"' + self.id + '",'
+                        '"cmd_name":"' + cmd_name + '",'
+                        '"cseq":' + str(self.cseq) + ','
+                        '"wanted_status":' + status + ''
+                    '},'
+                    '"sl_appl_msg_type":"domo",'
+                    '"sl_client_id":"' + self.id + '",'
+                    '"sl_cmd":"sl_data_req"'
+                '}')
         
         # Send the post request
         response = requests.post(self.host, params=param, headers=self.header)
@@ -156,10 +205,13 @@ class Domo:
         if not response.json()['sl_data_ack_reason'] == 0:
             raise RequestError
 
+        # After every action performed we update the list of items
+        self.update_lists()
+
         # Return the json of the response
         return response.json()
 
-    def get_light_id_from_name(self, floor_name: str, room_name: str, light: str):
+    def get_id_from_name(self, floor_name: str, room_name: str, light: str):
         """
         Return the act_id of the item contained in room contained in floor
 
@@ -170,7 +222,7 @@ class Domo:
         """
 
         # Get the list of lights
-        floors = self.lights_list()
+        floors = self.cmd_request(self.available_commands['lights'])['array']
 
         # Find the id of the light
         for floor in floors:
@@ -184,3 +236,28 @@ class Domo:
 
         # If the light has not been found raise an exception
         raise LightNotFound
+
+
+if __name__ == "__main__":
+    #ip = input("Inserire l'indirizzo IP del server Eti/Domo: ")
+    ip = "192.168.1.251"
+
+    # Create a new session with the specified host
+    session = ""
+    try:
+        session = Domo(ip)
+    except:
+        print("This server is not available")
+        sys.exit(-1)
+
+    # Login to the server
+    try:
+        username = "utente2"
+        password = "utente2"
+        session.login(username, password)
+    except UnauthorizedLogin:
+        print("Wrong username/password combination!")
+        sys.exit(-1)
+
+    # Print the session id
+    print(f"You are now logged in! ID: {session.id}")
