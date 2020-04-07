@@ -89,7 +89,7 @@ def print_thermos(session):
     print("\nRequesting the list of thermos...")
     floors = {}
     try:
-        floors = session.list_request(Domo.available_commands['thermos'])['array']
+        floors = session.list_request(Domo.available_commands['thermoregulation'])['array']
     except RequestError:
         print("The server cannot soddisfy this request")
     else:

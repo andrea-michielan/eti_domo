@@ -44,6 +44,21 @@ class Domo:
         "maps": "map_descr_req"
     }
 
+    # Dictionary of seasons available
+    seasons = {
+        "off": "plant_off",
+        "winter": "winter",
+        "summer": "summer"
+    }
+
+    # Dictionary of thermo zone status
+    thermo_status = {
+        0: "off",
+        1: "man",
+        2: "auto",
+        3: "jolly"
+    }
+
     def __init__(self, host: str):
         """ 
         Instantiate a new :class:`Object` of type :class:`Domo` that communicates with an Eti/Domo server at the specified ip address
@@ -70,7 +85,7 @@ class Domo:
             self.host = ""
             raise ServerNotFound
 
-    def login(self, username: str, password: str) -> None:
+    def login(self, username: str, password: str):
         """
         Method that takes in the username and password and attempt a login to the server.
         If the login is correct, then the ``id`` parameter of the object :class:`Domo` will be set to the session id given by the server.
@@ -90,12 +105,27 @@ class Domo:
         # Set the client id for the session
         self.id = response.json()['sl_client_id']
 
+        print(response.json())
+
         # Check if the user is authorized
         if not response.json()['sl_data_ack_reason'] == 0:
-            raise UnauthorizedLogin
+            return False
 
         # If the user has access to the server we make the request for all the items available
-        self.udpate_lists()
+        #self.udpate_lists()
+
+        return True
+
+    def is_login_valid(self):
+
+        parameters = 'command={"sl_client_id":"' + self.id + '","sl_cmd":"sl_keep_alive_req"}'
+
+        # Send the post request with the login parameters
+        response = requests.post(self.host, params=parameters, headers=self.header)
+
+        print(response.json())
+
+        return response.json()['sl_data_ack_reason'] == 0
 
     def update_lists(self):
         """ 
@@ -211,53 +241,95 @@ class Domo:
         # Return the json of the response
         return response.json()
 
-    def get_id_from_name(self, floor_name: str, room_name: str, light: str):
+    def thermo_mode(self, act_id: int, mode: int, temp: float) -> dict:
+        """ 
+        Method to change the operational mode of a thermo zone
+        
+        :param act_id: id of the thermo zone to be configured
+        :param mode: 0 Turned off, 1 Manual mode, 2 Auto mode, 3 Jolly mode
+        :param temp: Temperature to set
+        :return: a json dictionary representing the response of the server
+        :raises RequestError: Raise a RequestError if the request is invalid
         """
-        Return the act_id of the item contained in room contained in floor
 
-        :param floor_name: floor that contains the light
-        :param room_name: room inside floor_name that contains the light
-        :param light: name of the light
-        :return int: act_id of the light
+        # Check if the mode exists
+        if mode not in [0, 1, 2, 3]:
+            raise RequestError
+
+        # Transform the temperature from float to int, we need to pass the server
+        # an integer value, which is in Celsius, but multiplied by 10
+        # we also round the float value to only 1 digits 
+        value = int(round(temp * 10, 1))
+
+        # Create the requests' parameters
+        param = ('command={'
+                    '"sl_appl_msg":{'
+                        '"act_id":' + str(act_id) + ','
+                        '"client":"' + self.id + '",'
+                        '"cmd_name":"thermo_zone_config_req",'
+                        '"cseq":' + str(self.cseq) + ','
+                        '"extended_infos": 0,'
+                        '"mode":' + str(mode) + ','
+                        '"set_point":' +  str(value) + ''
+                    '},'
+                    '"sl_appl_msg_type":"domo",'
+                    '"sl_client_id":"' + self.id + '",'
+                    '"sl_cmd":"sl_data_req"'
+                '}')
+        
+        # Send the post request
+        response = requests.post(self.host, params=param, headers=self.header)
+
+        # Increment the cseq counter
+        self.cseq += 1
+
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
+
+        # After every action performed we update the list of items
+        self.update_lists()
+
+        # Return the json of the response
+        return response.json()
+
+    def change_season(self, season: str) -> dict:
+        """ 
+        Method that change the season of the entire thermo implant
+
+        :param season: string defining the season, it must be contained into the season dictionary
+        :return dict: a dictionary containing the response from the server
         """
 
-        # Get the list of lights
-        floors = self.cmd_request(self.available_commands['lights'])['array']
+        # Check if the season exists
+        if season not in ["plant_off", "summer", "winter"]:
+            raise RequestError
 
-        # Find the id of the light
-        for floor in floors:
-            if floor['name'] == floor_name:
-                for room in floor['array']:
-                    if room['name'] == room_name:
-                        for item in room['array']:
-                            if item['name'] == light:
-                                # Light found!
-                                return item['act_id']
+        # Create the requests' parameters
+        param = ('command={'
+                    '"sl_appl_msg":{'
+                        '"client":"' + self.id + '",'
+                        '"cmd_name":"thermo_season_req",'
+                        '"cseq":' + str(self.cseq) + ','
+                        '"season":"' + season + '"'
+                    '},'
+                    '"sl_appl_msg_type":"domo",'
+                    '"sl_client_id":"' + self.id + '",'
+                    '"sl_cmd":"sl_data_req"'
+                '}')
+        
+        # Send the post request
+        response = requests.post(self.host, params=param, headers=self.header)
 
-        # If the light has not been found raise an exception
-        raise LightNotFound
+        # Increment the cseq counter
+        self.cseq += 1
 
+        # Check if the response is valid
+        if not response.json()['sl_data_ack_reason'] == 0:
+            raise RequestError
 
-if __name__ == "__main__":
-    #ip = input("Inserire l'indirizzo IP del server Eti/Domo: ")
-    ip = "192.168.1.251"
+        # After every action performed we update the list of items
+        self.update_lists()
 
-    # Create a new session with the specified host
-    session = ""
-    try:
-        session = Domo(ip)
-    except:
-        print("This server is not available")
-        sys.exit(-1)
-
-    # Login to the server
-    try:
-        username = "utente2"
-        password = "utente2"
-        session.login(username, password)
-    except UnauthorizedLogin:
-        print("Wrong username/password combination!")
-        sys.exit(-1)
-
-    # Print the session id
-    print(f"You are now logged in! ID: {session.id}")
+        # Return the json of the response
+        return response.json()
