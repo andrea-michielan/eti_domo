@@ -1,20 +1,12 @@
 import requests
 import sys
 
-class UnauthorizedLogin(Exception):
-    """ Raised when a user try to login with wrong username/password combination """
-    pass
-
 class RequestError(Exception):
     """ Raised when a user send an invalid request to the server """
     pass
 
 class ServerNotFound(Exception):
     """ Raised when the specified host is not available """
-    pass
-
-class LightNotFound(Exception):
-    """ Raised when a light is not available """
     pass
 
 class CommandNotFound(Exception):
@@ -68,9 +60,9 @@ class Domo:
         """
 
         # Wrap the host ip in a http url
-        self.host = "http://" + host + "/domo/"
+        self._host = "http://" + host + "/domo/"
         # The sequence start from 1
-        self.cseq = 1
+        self._cseq = 1
         # Session id for the client
         self.id = ""
 
@@ -78,11 +70,11 @@ class Domo:
         self.items = {}
 
         # Check if the host is available
-        response = requests.get(self.host, headers=self.header)
+        response = requests.get(self._host, headers=self.header)
 
         # If not then raise an exception
         if not response.status_code == 200:
-            self.host = ""
+            self._host = ""
             raise ServerNotFound
 
     def login(self, username: str, password: str):
@@ -93,37 +85,29 @@ class Domo:
         :param username: username of the user
         :param password: password of the user
         :return: ``<None>``
-        :raises UnauthorizedLogin: if the combination of username and password is incorrect.
         """
 
         # Create the login request
         login_parameters = 'command={"sl_cmd":"sl_registration_req","sl_login":"' + str(username) + '","sl_pwd":"' + str(password) + '"}'
 
         # Send the post request with the login parameters
-        response = requests.post(self.host, params=login_parameters, headers=self.header)
+        response = requests.post(self._host, params=login_parameters, headers=self.header)
 
         # Set the client id for the session
         self.id = response.json()['sl_client_id']
-
-        print(response.json())
 
         # Check if the user is authorized
         if not response.json()['sl_data_ack_reason'] == 0:
             return False
 
-        # If the user has access to the server we make the request for all the items available
-        #self.udpate_lists()
-
         return True
 
-    def is_login_valid(self):
+    def keep_alive(self):
 
         parameters = 'command={"sl_client_id":"' + self.id + '","sl_cmd":"sl_keep_alive_req"}'
 
         # Send the post request with the login parameters
-        response = requests.post(self.host, params=parameters, headers=self.header)
-
-        print(response.json())
+        response = requests.post(self._host, params=parameters, headers=self.header)
 
         return response.json()['sl_data_ack_reason'] == 0
 
@@ -163,7 +147,7 @@ class Domo:
         sl_appl_msg =   ('"sl_appl_msg":{' 
                             '' + client_id + ''
                             '"cmd_name":"' + cmd_name + '",'
-                            '"cseq":' + str(self.cseq) + ''
+                            '"cseq":' + str(self._cseq) + ''
                         '},'
                         '"sl_appl_msg_type":"domo",' if not cmd_name == "sl_users_list_req" else ''
                         )
@@ -178,17 +162,16 @@ class Domo:
                 )
         
         # Send the post request
-        response = requests.post(self.host, params=param, headers=self.header)
+        response = requests.post(self._host, params=param, headers=self.header)
 
         # Get a json dictionary from the response
         response_json = response.json()
 
         # Increment the cseq counter
-        self.cseq += 1
+        self._cseq += 1
 
         # Check if the response is valid
         if not response_json['sl_data_ack_reason'] == 0:
-            print(response_json)
             raise RequestError
 
         # Return the json of the response
@@ -217,7 +200,7 @@ class Domo:
                         '"act_id":' + str(act_id) + ','
                         '"client":"' + self.id + '",'
                         '"cmd_name":"' + cmd_name + '",'
-                        '"cseq":' + str(self.cseq) + ','
+                        '"cseq":' + str(self._cseq) + ','
                         '"wanted_status":' + status + ''
                     '},'
                     '"sl_appl_msg_type":"domo",'
@@ -226,10 +209,10 @@ class Domo:
                 '}')
         
         # Send the post request
-        response = requests.post(self.host, params=param, headers=self.header)
+        response = requests.post(self._host, params=param, headers=self.header)
 
         # Increment the cseq counter
-        self.cseq += 1
+        self._cseq += 1
 
         # Check if the response is valid
         if not response.json()['sl_data_ack_reason'] == 0:
@@ -267,7 +250,7 @@ class Domo:
                         '"act_id":' + str(act_id) + ','
                         '"client":"' + self.id + '",'
                         '"cmd_name":"thermo_zone_config_req",'
-                        '"cseq":' + str(self.cseq) + ','
+                        '"cseq":' + str(self._cseq) + ','
                         '"extended_infos": 0,'
                         '"mode":' + str(mode) + ','
                         '"set_point":' +  str(value) + ''
@@ -278,10 +261,10 @@ class Domo:
                 '}')
         
         # Send the post request
-        response = requests.post(self.host, params=param, headers=self.header)
+        response = requests.post(self._host, params=param, headers=self.header)
 
         # Increment the cseq counter
-        self.cseq += 1
+        self._cseq += 1
 
         # Check if the response is valid
         if not response.json()['sl_data_ack_reason'] == 0:
@@ -310,7 +293,7 @@ class Domo:
                     '"sl_appl_msg":{'
                         '"client":"' + self.id + '",'
                         '"cmd_name":"thermo_season_req",'
-                        '"cseq":' + str(self.cseq) + ','
+                        '"cseq":' + str(self._cseq) + ','
                         '"season":"' + season + '"'
                     '},'
                     '"sl_appl_msg_type":"domo",'
@@ -319,10 +302,10 @@ class Domo:
                 '}')
         
         # Send the post request
-        response = requests.post(self.host, params=param, headers=self.header)
+        response = requests.post(self._host, params=param, headers=self.header)
 
         # Increment the cseq counter
-        self.cseq += 1
+        self._cseq += 1
 
         # Check if the response is valid
         if not response.json()['sl_data_ack_reason'] == 0:
