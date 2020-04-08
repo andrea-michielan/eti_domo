@@ -13,7 +13,7 @@ Note: `status` and `is_light` default to `True`, so if you want to turn on the l
 hub.switch(69)
 ```
 The server in either cases will respond with a Json acknowledging the request:
-```Json
+```yaml
 {
     'cseq': 12, 
     'cmd_name': 'generic_reply', 

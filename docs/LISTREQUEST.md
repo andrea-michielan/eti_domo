@@ -15,7 +15,7 @@ print("\nRequesting an update...")
 print(hub.list_request(Domo.available_commands['update']))
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cmd_name': 'status_update_resp', 
     'cseq': 1, 
@@ -58,7 +58,7 @@ else:
         print(f"[Relay {index}] {relay['name']}, id: {relay['act_id']}, status: {relay['status']}")
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cmd_name': 'relays_list_resp', 
     'cseq': 2, 
@@ -104,7 +104,7 @@ else:
             print(f"\t\tEnabled: {time['active']}")
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cseq': 3, 
     'cmd_name': 'timers_list_resp', 
@@ -148,7 +148,7 @@ else:
         print(f"\t[Zone name]: {floor['name']}, status: {floor['status']}, temp: {str(floor['temp'])[:-1]}.{str(floor['temp'])[-1::]}° C, id: {floor['act_id']}")
 ```
 This is an example of a Json returned by the server:
-```json
+```yaml
 {
     'cseq': 1, 
     'cmd_name': 'thermo_list_resp', 
@@ -223,7 +223,7 @@ else:
         print(f"[Item name]: {item['name']}, id: {item['act_id']}, value: {item['value']}{item['unit']}")
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cseq': 3, 
     'cmd_name': 'analogin_list_resp', 
@@ -248,7 +248,7 @@ print("\nRequesting the list of digital inputs...")
 print(session.list_request(Domo.available_commands['digitalin']))
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cmd_name': 'digitalin_list_resp', 
     'cseq': 5, 
@@ -292,7 +292,7 @@ else:
                 print(f"\t\t[Light name]: {item['name']}, status: {item['status']}, id: {item['act_id']}")
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cseq': 6, 
     'cmd_name': 'light_list_resp', 
@@ -405,7 +405,7 @@ else:
         print(f"[Feature {index}] {feature}")
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cmd_name': 'feature_list_resp', 
     'cseq': 8, 
@@ -448,7 +448,7 @@ else:
         print(f"[User {index}] {user['name']}")
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'sl_cmd': 'sl_users_list_resp', 
     'sl_data_ack_reason': 0, 
@@ -474,7 +474,7 @@ print("\nRequesting the list of map elements...")
 print(hub.list_request(Domo.available_commands['maps']))
 ```
 Example of a Json returned by the server:
-```json
+```yaml
 {
     'cseq': 11, 
     'cmd_name': 'map_descr_resp', 

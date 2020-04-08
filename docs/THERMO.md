@@ -11,7 +11,7 @@ Where `temp` is a floating point value describing the target temperature of the 
 * 3: jolly mode
 
 Example of a Json response from the server:
-```Json
+```yaml
 {
     'cseq': 2, 
     'cmd_name': 'generic_reply', 
@@ -30,7 +30,7 @@ As you can see you have to pass the function a string representing the season th
 * Domo.seasons['off']
 
 Example of a Json response from the server:
-```Json
+```yaml
 {
     'cseq': 2, 
     'cmd_name': 'generic_reply', 
